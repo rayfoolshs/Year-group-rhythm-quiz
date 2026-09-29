@@ -848,7 +848,7 @@ function makeQuestion(yearIdx, mode){
       yearIdx, sig, cells, target, options,
       total: sigTotal(sig),
       prompt: `Which rhythm completes this ${sig} bar?`,
-      explain: `The empty space must last ${fmtBeats(target)}.`
+      explain: `The empty space must last ${describeMissing(sig, target, sigTotal(sig))}.`
     };
   }
   // fallback: simple 4/4 crotchet question
@@ -863,13 +863,44 @@ function makeQuestion(yearIdx, mode){
       {atoms:[{n:'dotted-crotchet'}],dur:1.5,correct:false}
     ],
     prompt:'Which rhythm completes this 4/4 bar?',
-    explain:`The empty space must last ${fmtBeats(target)}.`
+    explain:`The empty space must last ${describeMissing('4/4', target, 4)}.`
   };
 }
 
 function fmtBeats(d){
   const names = {0.5:'half a beat',1:'1 beat',1.5:'1½ beats',2:'2 beats',3:'3 beats',4:'4 beats',0.25:'a quarter of a beat',0.75:'¾ of a beat'};
   return names[d] || (d + ' beats');
+}
+// Length of one beat, in crotchet beats, for a given time signature.
+// Simple time (x/4) -> a crotchet; compound time (6/8, 9/8, 12/8) -> a dotted crotchet.
+function beatUnit(sig){
+  if(!sig) return 1;
+  const p = sig.split('/'), n = +p[0], d = +p[1];
+  if(d === 4) return 1;
+  if(d === 8) return (n % 3 === 0) ? 1.5 : 0.5;
+  return 4/d;
+}
+function isIrregular8(sig){
+  if(!sig) return false;
+  const p = sig.split('/');
+  return +p[1] === 8 && (+p[0]) % 3 !== 0;
+}
+// Describe a duration using the beats of its own metre (feedback wording only).
+function describeBeats(sig, d){
+  if(isIrregular8(sig)){ // e.g. 7/8 -> count quavers
+    const q = Math.round(d*2*100)/100;
+    if(Math.abs(q - Math.round(q)) < 1e-6){ const n = Math.round(q); return n + (n===1?' quaver':' quavers'); }
+    return fmtBeats(d);
+  }
+  const bu = beatUnit(sig);
+  const beats = Math.round((d/bu)*100)/100;
+  if(Math.abs(beats - Math.round(beats)) < 1e-6){ const n = Math.round(beats); return n + (n===1?' beat':' beats'); }
+  return fmtBeats(d);
+}
+// The missing length: "the whole bar" when it fills the bar, else the metre's beats.
+function describeMissing(sig, d, total){
+  if(eq(d, total)) return 'the whole bar';
+  return describeBeats(sig, d);
 }
 
 /* ---------- concept questions: Pre-primary & Year 1 ---------- */
@@ -1171,7 +1202,7 @@ $('hintBtn').onclick = ()=>{
   const q=state.q;
   if(q.concept){ $('hintText').textContent='Hint: ' + q.explain; return; }
   const target = q.target;
-  $('hintText').textContent = `Hint: the bar totals ${fmtBeats(q.total)}, and the filled-in parts already total ${fmtBeats(Math.round((q.total-target)*1000)/1000)}. So the empty box needs ${fmtBeats(target)}.`;
+  $('hintText').textContent = `Hint: this ${q.sig} bar lasts ${describeBeats(q.sig, q.total)}. The empty box must last ${describeMissing(q.sig, q.target, q.total)}.`;
 };
 document.addEventListener('keydown', e=>{
   const testOpen = $('testOverlay').classList.contains('show');
