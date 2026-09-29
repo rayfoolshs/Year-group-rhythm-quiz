@@ -1,199 +1,248 @@
-# Build Plan — Year-group Rhythm Quiz
+# Building Plan — Rhythm Quiz ("Complete the Bar")
 
-**Project:** Year-group Rhythm Quiz ("Complete the Bar")
-**Curriculum:** Western Australian Curriculum — The Arts | Music, Scope and sequence, Pre-primary–Year 10 (Addendum: elements of music — **Rhythm**)
-**Version:** 1.0 · **Date:** 28 September 2026 · **Owner:** ray.foo@lakelandshs.wa.edu.au
-**Repository:** https://github.com/rayfoolshs/Year-group-rhythm-quiz (private)
+> **Scope note.** This plan covers the project already in this folder: the offline
+> `rhythm-quiz-package/` quiz + 10-question test tool for the WA Music Scope & Sequence
+> (Pre-primary–Year 10). It documents what is built, how it fits together, and a phased
+> plan for building it up from foundation to release and beyond. If you meant a different
+> "this" (e.g. a brand-new rhythm game), tell me and I'll retarget it.
 
 ---
 
-## 1. Purpose
+## 1. Goal and constraints
 
-Build a self-contained, offline, browser-based tool that helps students learn the **rhythm** content of the WA Music curriculum by completing bars. It provides both **practice** (instant feedback) and a **10-question test per year group** with results exported to CSV for the teacher.
+**Goal.** A teacher can double-click one HTML file and run a music-rhythm quiz and a fixed
+10-question test for any year group, then export a class results CSV — with no install, no
+build step, no server, no internet.
 
-## 2. Goals and objectives
+**Hard constraints (these drive every decision):**
 
-- Present only the rhythms each year group is required to learn (no content from later years).
-- Give students a clear, motivating way to practise reading and completing rhythm bars.
-- Give teachers a fast, low-friction assessment tool (student name, score, question-by-question review, CSV class list).
-- Run anywhere with no install, no server, and no internet.
-
-## 3. Success criteria
-
-| # | Criterion |
+| Constraint | Consequence |
 | --- | --- |
-| 1 | All 11 year groups (Pre-primary–Year 10) selectable, each using only its own rhythm content |
-| 2 | Bar-completion questions across 2/4, 3/4, 4/4, 5/4, 6/8, 7/8, 9/8, 12/8 |
-| 3 | Notation is musically correct, including **metric beaming** (beams never break the pulse) |
-| 4 | Each year has a fixed 10-question test with a student-name field and a review sheet |
-| 5 | CSV export with `Year, Name, Date, Score, Q1–Q10, Wrong`, answer key on top, student rows below, appending into one class list |
-| 6 | Runs from a single HTML file by double-click, offline, with no console errors |
+| Runs from `file://` by double-click | No ES modules, no `fetch()` of local data, no bundler. Everything inline or via relative `<script src>`. |
+| No internet | VexFlow must be vendored locally (`lib/vexflow.min.js`). |
+| No build step | `index.html` is the source of truth; standalone + zip are generated from it. |
+| One answer must be unambiguous | Every question option must have a **unique** total duration. |
+| Results must survive a page reload | `localStorage` is the only durable store available. |
 
-## 4. Scope
+---
 
-**In scope**
-- Practice mode with hints and feedback.
-- Test mode (10 fixed questions per year), results review, CSV export, class list.
-- High-quality vector notation (VexFlow) with correct beaming.
-- Package delivery (folder), single-file build, and zip.
+## 2. What already exists (audit)
 
-**Out of scope (v1)**
-- Audio playback / aural training.
-- Teacher accounts, cloud storage, multi-device sync.
-- LMS integration (Google Classroom, SEQTA, Canvas).
-- Marking of written/invented notation.
-
-## 5. Audience and stakeholders
-
-- **Students** (Pre-primary–Year 10) — practice and sit tests.
-- **Music teachers** — run tests, export and review results.
-- **School IT / data privacy** — review data handling before classroom deployment.
-
-## 6. Curriculum mapping (source of truth)
-
-Content is taken from the Addendum table "Examples of the elements of music … Rhythm".
-
-| Year | Rhythm content used |
-| --- | --- |
-| Pre-primary | Steady beat, sound and silence, long and short |
-| Year 1 | Quavers, beamed quavers, groups of 2/3/4 beats |
-| Year 2 | 2/4, minim, crotchet, quaver, quaver rest |
-| Year 3 | 4/4, four beamed semiquavers, minim rest, crotchet rest |
-| Year 4 | 3/4, dotted minim, semibreve |
-| Year 5 | Semibreve rest, anacrusis, dotted quaver + semiquaver, quaver + two semiquavers |
-| Year 6 | Consolidation of 2/4, 3/4, 4/4 |
-| Year 7 | 2/4, 3/4, 4/4, groups of beats, anacrusis, dotted crotchet + quaver |
-| Year 8 | Compound 6/8, ties, dotted crotchet, dotted minim |
-| Year 9 | Simple-time groupings, 7/8, quaver triplet, swung rhythms |
-| Year 10 | Compound 12/8 and 9/8, simple 5/4, syncopation, tied/irregular rhythms |
-
-## 7. Functional requirements
-
-**FR-1 Practice mode** — year tabs; random question; option selection; immediate correct/incorrect feedback with explanation; hint; score/streak; teacher answer-key log; keyboard shortcuts.
-
-**FR-2 Question generation** — build bars from a rhythm pattern library scoped by year; one blank; four options with unique durations; exactly one correct; supports "complete part of a bar" and "fill the whole bar" types.
-
-**FR-3 Notation** — vector SVG; time signatures; dashed blank box; correct stems, flags, beams, ties, tuplets, rests; **beams grouped by the metric pulse** (simple = crotchet, compound = dotted crotchet, 7/8 = 2+2+3).
-
-**FR-4 Test mode** — fixed 10 questions per year (deterministic), student-name input, progress bar, no marking until the end, results review table `Q | Question | Your answer | Correct answer | ✓/✗`.
-
-**FR-5 Results and export** — store results in-browser; export CSV with a Year column, answer-key row on top, student rows below, ✗ marks and a Wrong list; single-year and all-years exports; class-list panel; clear results.
-
-**FR-6 Delivery** — `index.html` + `lib/vexflow.min.js` + docs; a generated single-file `rhythm-quiz-standalone.html`; a clean `rhythm-quiz-package.zip`.
-
-## 8. Non-functional requirements
-
-- **Offline / zero-install:** works over `file://`; no build step; no network.
-- **Performance:** instant question rendering; no perceptible lag on classroom laptops.
-- **Accessibility:** keyboard operable, sufficient colour contrast, responsive to one column on small screens, print-friendly.
-- **Portability:** modern evergreen browsers (Chrome, Edge, Safari, Firefox).
-- **Maintainability:** plain HTML/CSS/JS; no framework; clearly sectioned code; documented rhythm library.
-- **Privacy:** no transmission; results held locally by default (see §10 risks).
-
-## 9. Technical architecture
-
-```
-rhythm-quiz-package/
-├── index.html          UI + CSS + app logic; loads the notation engine
-├── lib/vexflow.min.js  VexFlow 3.0.9 (MIT) — vector notation
-├── README.md
-└── LICENSES.md
-```
-
-**Modules inside `index.html`**
-1. **SVG fallback renderer** — used only if VexFlow fails to load.
-2. **VexFlow layer** — note construction, rests, dots, ties, tuplets.
-3. **Metric beaming engine** — `beatGrid()`, `metricBeams()`; confines every beam to one beat.
-4. **Pattern library** — named rhythm cells with a duration and a `since` (year introduced).
-5. **Year configuration** — time signatures + rhythm vocabulary per year.
-6. **Generator** — bar partitions, blank selection, distractor selection with unique durations.
-7. **Practice UI** — tabs, question card, feedback, score, answer key.
-8. **Test engine** — deterministic 10-question paper, flow, review table.
-9. **Results/CSV** — `localStorage` records, CSV builder/escaping, download, class list.
-
-**Data model (abridged)**
-- `PATTERNS`: `{ id, atoms, since, note }`
-- Question: `{ yearIdx, sig, cells[], target, options[], total, prompt, explain }`
-- Record: `{ name, yearIdx, yearLabel, date, score, total, answers[], correct[], wrong[] }`
-
-## 10. Data, privacy and compliance
-
-- The app stores student **name, date, score and answers** in the browser's `localStorage` and exports them as CSV. Nothing is transmitted.
-- Risks on shared devices: the class list and any CSV are readable by the next user.
-- **Mitigations to schedule (see Phase 9):** optional anonymous mode, session-only storage, PIN on the teacher panel, auto-clear, privacy notice.
-- Note: the app is **not** SOC 2 certified (SOC 2 is an organisational attestation, not a property of a file). Apply school privacy policy (e.g. Australian Privacy Principles / WA DoE policy) before storing student names.
-
-## 11. Phases and milestones
-
-Status key: ✅ done · 🟡 in progress · ⬜ planned
-
-| Phase | Deliverable | Key tasks | Est. | Status |
-| --- | --- | --- | --- | --- |
-| 0 | Content extraction | Parse the PDF; render pages to read image-based time signatures; build the year→rhythm table | 0.5 d | ✅ |
-| 1 | Notation prototype | VexFlow integration; notes, rests, beams, ties, tuplets; blank box overlay | 1 d | ✅ |
-| 2 | Practice mode | Pattern library, year scoping, generator, tabs, feedback, hints, score | 1.5 d | ✅ |
-| 3 | Test mode | Fixed 10-question paper, name entry, progress, review table | 1 d | ✅ |
-| 4 | CSV & class list | Records storage, CSV builder, answer-key row, single/all-year export, class panel | 1 d | ✅ |
-| 5 | Correctness pass | Year 4 scope fix (dotted crotchet moved to Y7); whole-bar questions for focus rhythms; **metric beaming** | 1 d | ✅ |
-| 6 | Packaging & docs | Package folder, standalone build, zip, README, licences, build prompt | 0.5 d | ✅ |
-| 7 | QA & accessibility | Validation loop, cross-browser checks, keyboard, responsive, print | 0.5 d | ⬜ |
-| 8 | Release & backup | Git init, GitHub remote, push; version tag | 0.25 d | ✅ |
-| 9 | Hardening / v1.1 | Anonymous mode, session-only option, PIN, auto-clear, privacy notice | 1 d | ⬜ |
-| 10 | Enhancements / v2 | Audio playback, teacher dashboard, LMS export | TBD | ⬜ |
-
-**Total to a classroom-ready v1: ≈ 8–9 person-days** (Phases 0–8), of which the build itself is complete.
-
-## 12. Test plan
-
-- **Content validation (automated):** for hundreds of generated questions per year, assert (a) bar totals equal the time signature, (b) at least one given cell, (c) exactly one option matches the target, (d) four distinct option durations.
-- **Notation checks:** beaming per metre (4/4 four quavers → 2+2; 6/8 six quavers → 3+3; 7/8 → 2+2+3); rests break beams; triplets beamed as a group; blank box aligns to the beat.
-- **Test engine:** every year returns 10 questions with a stable answer key; CSV header/rows correct; results append.
-- **Browser matrix:** Chrome/Edge/Safari/Firefox; 1366×768 laptop and tablet; `file://` launch.
-- **Accessibility:** tab/Enter navigation, visible focus, contrast, print to PDF.
-
-## 13. Risks and mitigations
-
-| Risk | Impact | Mitigation |
+| Artifact | Status | Notes |
 | --- | --- | --- |
-| Incorrect beaming (beams crossing the pulse) | Teaches wrong notation | Metric beaming engine + visual checks (fixed in v1) |
-| Out-of-scope rhythms in a year | Too hard / off-curriculum | `since` tags per pattern; verified against the PDF (Y4 fixed) |
-| Student privacy on shared devices | Data exposure | Anonymous/session-only options, PIN panel, auto-clear (Phase 9) |
-| VexFlow unavailable/offline | No notation | Library bundled (standalone) or vendored locally (package) |
-| Test paper changes after printing | Mismatch with marked papers | Fixed per-year seed; version-stamp the paper in a future release |
-| Question ambiguity | Two correct answers | Unique option durations enforced by validation |
+| `rhythm-quiz-package/index.html` | Built, ~1,414 lines / ~62 KB | All content + logic. |
+| `rhythm-quiz-package/lib/vexflow.min.js` | Vendored | VexFlow 3.0.9, MIT, ~754 KB. |
+| `rhythm-quiz-package/README.md` | Built | Teacher-facing instructions. |
+| `rhythm-quiz-package/LICENSES.md` | Built | VexFlow MIT + SCSA attribution. |
+| `rhythm-quiz-standalone.html` | Built | Same quiz, VexFlow inlined. |
+| `rhythm-quiz-package.zip` | Built | Clean zip for sharing. |
+| `BUILD-PROMPT.md` | Built | Original spec. |
+| `README.md` (top level) | Built | Explains the three deliverables. |
 
-## 14. Acceptance criteria (definition of done for v1)
+**Functional coverage:** 11 year groups selectable; practice mode with hints + immediate
+feedback; deterministic per-year 10-question tests; review table; CSV with answer-key row on
+top and appended class list.
 
-- [ ] All success criteria in §3 met.
-- [ ] Automated content validation passes with zero failures.
-- [ ] No console errors on load in the supported browsers.
-- [ ] Package, standalone file and zip all open and work offline.
-- [ ] README and licences present; repo pushed to GitHub.
+So this is **not a greenfield build** — it is a *rebuild/extension* plan. Phases 0–6 below
+describe how to construct it from zero (useful for a rewrite, a new year's variant, or a
+teammate picking it up), and Phase 7 is the forward roadmap.
 
-## 15. Future roadmap (v2 ideas)
+---
 
-- **Aural mode:** play the bar (Web Audio) so students identify rhythms by ear.
-- **Teacher dashboard:** import CSV, class analytics, per-question difficulty.
-- **LMS export:** Google Classroom / Canvas / SEQTA-friendly formats.
-- **Custom papers:** teacher selects question types and difficulty per year.
-- **Versioned papers:** stamp each generated paper so printed tests map to a CSV revision.
-- **Anonymous-first mode:** student IDs instead of names, with a privacy notice.
+## 3. Architecture
 
-## 16. Build and release commands
+Single-page app, no framework. `index.html` is organised into six numbered sections plus a
+styling block. Line landmarks (current file):
 
-```bash
-# regenerate the single-file build from the package
-python3 - <<'PY'
-idx=open("rhythm-quiz-package/index.html").read()
-vf=open("rhythm-quiz-package/lib/vexflow.min.js").read()
-tag='<script src="lib/vexflow.min.js"></script>'
-inline='<script>\n/* VexFlow 3.0.9 - MIT - inlined */\n'+vf+'\n</script>'
-open("rhythm-quiz-standalone.html","w").write(idx.replace(tag,inline,1))
-PY
-
-# rebuild the distributable zip (no macOS junk)
-zip -rX rhythm-quiz-package.zip rhythm-quiz-package
-
-# commit and back up
-git add -A && git commit -m "..." && git push
 ```
+ 1–273     HTML shell + CSS (tokens, layout, cards, tabs, print styles)
+ 274–476   §1  Music note model + hand-drawn SVG renderer (fallback)
+ 477–515   §1b VexFlow renderer (primary notation path)
+ 516–686       Metric beaming logic
+ 687–700       Concept (non-staff) graphics for Pre-primary / Year 1
+ 701–729   §2  Rhythm pattern library (per year, from the Addendum)
+ 730–757   §3  Year groups + time-signature totals
+ 758–771       Metric helpers
+ 772–870   §4  Question generator (staff questions)
+ 871–1018      Concept question generator
+1019–1161  §5  App state + practice-mode UI
+1162–1187      Event wiring
+1188–1332  §6  Test mode (fixed 10 questions) + overlay flow
+1333–1381      CSV export
+1382–1404      Test/results event wiring
+1405–1414      Boot
+```
+
+**Data flow**
+
+```
+Addendum rhythm vocabulary
+        │
+        ▼
+§2 pattern library ──► §4 question generator ──► §5 practice UI
+        │                     │                       │
+        │                     ▼                       ▼
+        │              unique-duration options   score / answer-key panel
+        │                     │
+        ▼                     ▼
+§3 year groups ──► §6 test mode (deterministic seed) ──► localStorage ──► CSV
+        │
+        ▼
+§1/§1b renderer (SVG → VexFlow) drawn into every bar and option
+```
+
+**Key invariants to preserve**
+
+1. Bar total always equals the time signature (`sigTotal` in §3).
+2. Every question has ≥1 given cell and exactly one option matching the target.
+3. Beams never cross a beat or a bar line (metric beaming, §516).
+4. Test questions are seeded per year, so the answer key is identical for every student.
+5. Durations are compared in crotchet beats; note values are exact fractions, not floats
+   compared loosely.
+
+---
+
+## 4. Build phases
+
+### Phase 0 — Foundations
+**Deliverable:** repo skeleton + vendored engine.
+- [ ] Create `rhythm-quiz-package/` with `index.html`, `lib/`, `README.md`, `LICENSES.md`.
+- [ ] Vendor VexFlow 3.0.9 into `lib/vexflow.min.js`; record MIT text in `LICENSES.md`.
+- [ ] Confirm it loads over `file://` (no CORS/module errors).
+- [ ] Add the top-level `README.md` describing the three deliverables.
+
+**Exit test:** a blank page with VexFlow rendering one stave, opened by double-click.
+
+### Phase 1 — Notation engine
+**Deliverable:** correct, professional notation for every required value.
+- [ ] §1 hand-drawn SVG fallback (notehead, stem, flag, dot, rest glyphs).
+- [ ] §1b VexFlow path: `Voice` with `setStrict(false)`, `addDotToAll()`, `Beam`, `StaveTie`,
+      `Tuplet`; blank beat = transparent rest + dashed box overlay with `?`.
+- [ ] §516 metric beaming: 1 crotchet in simple time; 1 dotted crotchet in compound;
+      2+2+3 eighths in 7/8.
+- [ ] Confirm SVG `viewBox` present so notation scales in tables.
+
+**Exit test:** every note value in the vocabulary renders with correct stems/flags/beams/
+rests; nothing crosses a beat.
+
+### Phase 2 — Content model
+**Deliverable:** the Addendum's rhythm vocabulary encoded per year.
+- [ ] §2 pattern library, one entry per year group (11 entries).
+- [ ] §3 year groups + `sigTotal`; time signatures 2/4, 3/4, 4/4, 5/4, 6/8, 7/8, 9/8, 12/8.
+- [ ] Duration table (semibreve 4 … semiquaver 0.25; rests equal; quaver triplet = 1).
+
+**Exit test:** a table listing each year and the values it may use matches the Addendum.
+
+### Phase 3 — Question generator
+**Deliverable:** unambiguous questions with exactly one correct option.
+- [ ] §4 staff questions: choose time signature, fill all but one cell, target = missing beats,
+      generate 4 options with **unique** durations, one matching the target.
+- [ ] §871 concept questions for Pre-primary / Year 1 (steady beat, long/short/silence,
+      quaver patterns) since they have no time signature.
+- [ ] Hints/explanation strings per question.
+
+**Exit test:** an assertion loop over many seeds: total == time signature, ≥1 given cell,
+exactly one correct option. No duplicate-duration options.
+
+### Phase 4 — Practice mode
+**Deliverable:** the main learning screen.
+- [ ] §5 year tab bar (sticky, 11 tabs), question card, 4 option buttons.
+- [ ] Immediate feedback + explanation; Next / New / Hint / Restart score.
+- [ ] Score panel (correct / answered / streak) and teacher **Answer key** log.
+- [ ] Side panel "Rhythms for this year" that **updates on year change** (known bug source).
+- [ ] Keyboard `1`–`4` and `Enter`.
+- [ ] Fixed practice seed for reproducibility.
+
+**Exit test:** switching year updates question *and* side panel; keyboard works; feedback correct.
+
+### Phase 5 — Test mode + CSV
+**Deliverable:** the assessment path.
+- [ ] §6 deterministic 10-question test per year; name entry; progress bar; no marking until end.
+- [ ] Results: score /10 and review table **Q | Question | Your answer | Correct answer | ✓/✗**
+      (question shown as scaled bar; wrong rows red, correct green).
+- [ ] CSV spec: header `Year,Name,Date,Score,Q1…Q10,Wrong`; **answer-key row on top**; student
+      rows below with `✗` marks and a `Wrong` list; UTF-8 BOM; `Year` on every row.
+- [ ] `localStorage` key (e.g. `rq_results_v1`) appends into one growing class list.
+- [ ] `Download CSV (this year)` / `(all years)` / `Clear results` (with confirm).
+- [ ] Sidebar **Class results** panel (Name, Year, Score, Date).
+
+**Exit test:** sit a test, save, reload, sit another — download contains both students and one
+answer-key row per year.
+
+### Phase 6 — Packaging & release
+**Deliverable:** the three shareable artifacts.
+- [ ] Generate `rhythm-quiz-standalone.html` by inlining VexFlow from the package `index.html`.
+- [ ] Generate `rhythm-quiz-package.zip` cleanly (strip `__MACOSX`/resource forks).
+- [ ] Re-run the §1 invariant assertions; check the browser console is clean.
+- [ ] Update both READMEs if behaviour changed.
+- [ ] **Regenerate standalone + zip after every future change** (make this a rule).
+
+**Exit test:** all three artifacts work offline from a clean machine; acceptance checklist passes.
+
+---
+
+## 5. Acceptance checklist (definition of done)
+
+- [ ] All 11 year groups selectable; side panel updates per year.
+- [ ] Notation professional (stems/flags/beams/rests/time signatures correct).
+- [ ] Practice mode works with hints and immediate feedback.
+- [ ] Each year has a stable 10-question test with a name field.
+- [ ] Results table is `Q | Question | Your answer | Correct answer | ✓/✗`.
+- [ ] CSV header/order correct, answer-key row on top, ✗ marks + Wrong list, appends.
+- [ ] Package, standalone and zip all present and working offline.
+- [ ] Invariant assertions pass; console clean.
+
+---
+
+## 6. Risks and mitigations
+
+| Risk | Mitigation |
+| --- | --- |
+| Two options accidentally equal duration → two "correct" answers | Assert unique durations in the generator; fail loudly. |
+| Float drift when summing dotted values | Compare in exact fractions / rounded crotchet beats. |
+| Side panel not updating on year change | Explicit re-render in the year-tab handler; covered by exit test. |
+| Standalone/zip drifting from package | Always regenerate both from `index.html`; treat as build output. |
+| VexFlow API differences (e.g. `strokeRect` absent on SVGContext) | Use `beginPath/rect/stroke`; keep the SVG fallback path. |
+| `localStorage` cleared / different browser → "lost" results | Document it; CSV download is the durable copy; consider export/import JSON (Phase 7). |
+| Very long bars overflow on phones | `overflow-x:auto` on `.barwrap`; responsive grid collapses at 820px/560px. |
+
+---
+
+## 7. Forward roadmap (next builds)
+
+Ordered by value-to-effort; each is an independent, shippable increment.
+
+**Near term**
+1. **Export/import results as JSON** — back up and move the class list between machines.
+2. **Answer-key / teacher view print sheet** — print the fixed test + key for paper use.
+3. **Question bank size control** — let teachers pick 5/10/20 questions per test.
+4. **Accessibility pass** — ARIA labels on options, focus rings, screen-reader text for bars.
+
+**Medium term**
+5. **Aural mode** — play the bar with the Web Audio API (still fully offline); "which rhythm do you hear?"
+6. **Clap-along / tap-tempo mini-game** — turns the quiz into an actual rhythm game; needs timing + audio.
+7. **Per-student progress dashboard** — aggregate saved results into strengths/weaknesses per element.
+8. **Configurable CSV columns** — school/class fields, teacher name, free-text notes.
+
+**Longer term**
+9. **Curriculum expansion** — add Pitch/Melody and other elements from the Addendum using the same engine.
+10. **Suite shell** — a small launcher page that links the quiz plus new rhythm games (matches the "Rhythm Games" folder name).
+11. **Optional PWA/offline install** — service worker + manifest, while keeping the double-click path working.
+
+**Deferred / explicit non-goals**
+- No server, accounts, or cloud sync — that breaks the offline constraint.
+- No build step or framework migration unless a real need appears; the single-file model is a feature.
+
+---
+
+## 8. How to run / verify today
+
+```
+Open  rhythm-quiz-package/index.html        (primary package)
+Open  rhythm-quiz-standalone.html           (single-file)
+Unzip rhythm-quiz-package.zip               (share copy)
+```
+
+Verify in a browser: pick each year (side panel updates), answer a few (feedback + score),
+sit a 10-question test, save CSV, reload, check the class list persisted, and confirm the
+console has no errors.
