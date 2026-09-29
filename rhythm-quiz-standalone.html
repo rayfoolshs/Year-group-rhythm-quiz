@@ -494,9 +494,17 @@ const VEX_BASE = {
 };
 const isDottedName = name => name.indexOf('dotted-') === 0;
 
+// Vertical placement for rests, per standard notation:
+//   • a whole (semibreve) rest hangs from the 4th line up  -> treble key d/5
+//   • a half (minim) rest sits on the 3rd (middle) line    -> treble key b/4
+//   • crotchet / quaver / semiquaver rests sit about the middle line -> b/4
+function keyForNote(name){
+  if(name === 'semibreve-rest' || name === 'dotted-semibreve-rest') return 'd/5';
+  return NOTE_KEY;
+}
 function mkNote(name){
   const isRest = name.indexOf('-rest') >= 0;
-  const n = new VF.StaveNote({ keys:[NOTE_KEY], duration: VEX_BASE[name] + (isRest ? 'r' : '') });
+  const n = new VF.StaveNote({ keys:[keyForNote(name)], duration: VEX_BASE[name] + (isRest ? 'r' : '') });
   if(isDottedName(name)) n.addDotToAll();
   return n;
 }
@@ -753,7 +761,7 @@ const YEARS = [
     rhythms:['Time signatures 2/4, 3/4, 4/4','Groups of beats (2, 3, 4)','Anacrusis','Dotted crotchet + quaver'] },
   { id:'Y8',  label:'Year 8', sigs:['6/8'],
     rhythms:['Compound time 6/8','Ties','Dotted crotchet (one compound beat)','Dotted minim (whole 6/8 bar)'] },
-  { id:'Y9',  label:'Year 9', sigs:['6/8','7/8','3/4','4/4'],
+  { id:'Y9',  label:'Year 9', sigs:['6/8','3/4','4/4'],
     rhythms:['Beat groupings in simple time','Irregular metre 7/8','Quaver triplet','Swung rhythms'] },
   { id:'Y10', label:'Year 10', sigs:['12/8','9/8','7/8','5/4','4/4'],
     rhythms:['Compound time 12/8 and 9/8','Simple time 5/4','Syncopation','Irregular metres and tied notes'] }
